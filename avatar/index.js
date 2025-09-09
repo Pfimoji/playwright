@@ -1,9 +1,13 @@
 const express = require("express");
+const cors = require("cors"); // ✅ import CORS
 const { chromium } = require("playwright");
 
 const app = express();
-const PORT = process.env.PORT || 3000;
 
+// ✅ Allow cross-origin requests from any domain (or specify your React app URL)
+app.use(cors());
+
+const PORT = process.env.PORT || 3000;
 const FIGMA_SITE_URL = "https://pecan-kindle-00378129.figma.site";
 
 app.get("/", (req, res) => {
@@ -19,6 +23,7 @@ app.get("/screenshot", async (req, res) => {
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
       headless: true,
     });
+
     const page = await browser.newPage();
     await page.goto(FIGMA_SITE_URL, { waitUntil: "networkidle" });
     await page.waitForTimeout(2000);
