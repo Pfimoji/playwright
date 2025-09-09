@@ -7,6 +7,10 @@
     "type": "git",
     "url": "git+https://github.com/microsoft/playwright.git"
   },
+  "scripts": {
+  "start": "node index.js",
+  "postinstall": "npx playwright install"
+},
   "homepage": "https://playwright.dev",
   "engines": {
     "node": ">=18"
