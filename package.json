@@ -1,7 +1,8 @@
 {
-  "name": "playwright-figma-screenshot",
-  "version": "1.0.0",
-  "main": "index.js",
+  "name": "playwright-internal",
+  "private": true,
+  "version": "1.56.0-next",
+  "description": "A high-level API to automate web browsers",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/microsoft/playwright.git"
@@ -15,7 +16,6 @@
   },
   "license": "Apache-2.0",
   "scripts": {
-    "start": "node index.js",
     "ctest": "playwright test --config=tests/library/playwright.config.ts --project=chromium-*",
     "ftest": "playwright test --config=tests/library/playwright.config.ts --project=firefox-*",
     "wtest": "playwright test --config=tests/library/playwright.config.ts --project=webkit-*",
@@ -48,10 +48,6 @@
     "check-deps": "node utils/check_deps.js",
     "build-android-driver": "./utils/build_android_driver.sh",
     "innerloop": "playwright run-server --reuse-browser"
-  },
-  "dependencies": {
-    "express": "^4.18.2",
-    "playwright": "^1.44.0"
   },
   "workspaces": [
     "packages/*"
