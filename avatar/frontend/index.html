@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Figma Prototype Viewer</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; max-width: 900px; margin: auto; }
+    iframe { width: 100%; height: 600px; border: 2px solid #ccc; border-radius: 10px; }
+    button { padding: 12px 24px; font-size: 16px; border: none; border-radius: 6px; background: #0052CC; color: white; cursor: pointer; margin-top: 16px; }
+    button:disabled { background: gray; cursor: not-allowed; }
+  </style>
+</head>
+<body>
+  <h1>Figma Prototype Viewer</h1>
+
+  <iframe id="figma-prototype"
+    src="https://embed.figma.com/proto/G7PUJTYN52YUEOqLBwdfwZ/Untitled?page-id=0%3A1&node-id=5-2282&starting-point-node-id=5-2282&embed-host=share"
+    allowfullscreen
+  ></iframe>
+
+  <div style="text-align:center;">
+    <button id="download-btn">Download Latest Screenshot</button>
+  </div>
+
+  <script>
+    const btn = document.getElementById("download-btn");
+    const api = "https://playwright-4coz.onrender.com/screenshot";
+
+    btn.addEventListener("click", async () => {
+      btn.disabled = true;
+      btn.textContent = "Downloading...";
+      try {
+        const response = await fetch(api, { mode: "cors" });
+        if (!response.ok) throw new Error("Failed to fetch screenshot");
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "figma-screenshot.png";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+      } catch (err) {
+        console.error(err);
+        alert("Failed to download screenshot. Make sure your Render service has CORS enabled.");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Download Latest Screenshot";
+      }
+    });
+  </script>
+</body>
+</html>
