@@ -4,8 +4,8 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "start": "node index.js",
-    "build": "npm install && npx playwright install"
+    "start": "node App.js",
+    "build": "./render-build.sh"
   },
   "dependencies": {
     "cors": "^2.8.5",
