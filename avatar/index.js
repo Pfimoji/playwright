@@ -1,89 +1,55 @@
+// backend/screenshot.js
 import express from "express";
 import cors from "cors";
 import { chromium } from "playwright";
 
 const app = express();
-app.use(cors()); // allow frontend to call backend
+app.use(cors());
+app.use(express.json()); // for POST requests with JSON body
 
-// Helper: scroll page to load lazy content
-async function autoScroll(page) {
-  await page.evaluate(async () => {
-    await new Promise((resolve) => {
-      let totalHeight = 0;
-      const distance = 500;
-      const timer = setInterval(() => {
-        const scrollHeight = document.body.scrollHeight;
-        window.scrollBy(0, distance);
-        totalHeight += distance;
-
-        if (totalHeight >= scrollHeight) {
-          clearInterval(timer);
-          resolve();
-        }
-      }, 200);
-    });
-  });
-}
-
-// Wait until the page is "stable" (no DOM changes) for N ms
-async function waitForStability(page, stableTime = 1000, maxWait = 5000) {
-  const startTime = Date.now();
-  let lastHeight = await page.evaluate(() => document.body.scrollHeight);
-
-  while (Date.now() - startTime < maxWait) {
-    await page.waitForTimeout(stableTime);
-    const newHeight = await page.evaluate(() => document.body.scrollHeight);
-    if (newHeight === lastHeight) break; // page is stable
-    lastHeight = newHeight;
-  }
-}
-
-app.get("/screenshot", async (req, res) => {
-  const url = req.query.url;
-  const cookiesStr = req.query.cookies || "";
-
-  if (!url) return res.status(400).send("Missing url parameter");
-
-  const browser = await chromium.launch({ headless: true });
-  const context = await browser.newContext();
-  const page = await context.newPage();
-
-  // Apply cookies for authenticated pages
-  if (cookiesStr) {
-    const cookies = cookiesStr.split("; ").map((c) => {
-      const [name, ...rest] = c.split("=");
-      return {
-        name,
-        value: rest.join("="),
-        domain: "playwright-4coz.onrender.com", // adjust to your domain
-        path: "/",
-      };
-    });
-    await context.addCookies(cookies);
-  }
+/**
+ * POST /screenshot
+ * body: { url: string, actions: [{ type: 'click' | 'hover' | 'input', selector: string, value?: string }] }
+ */
+app.post("/screenshot", async (req, res) => {
+  const { url, actions = [] } = req.body;
+  if (!url) return res.status(400).send("Missing URL");
 
   try {
-    // Navigate to the target URL
+    const browser = await chromium.launch({ headless: true });
+    const page = await browser.newPage();
+
     await page.goto(url, { waitUntil: "networkidle" });
 
-    // Scroll the page to trigger lazy-loading
-    await autoScroll(page);
+    // Wait for your main container to render dynamic content
+    await page.waitForSelector("#container");
 
-    // Wait until page DOM stabilizes (no more changes)
-    await waitForStability(page, 1000, 7000);
+    // Perform interactive actions before screenshot
+    for (const action of actions) {
+      const el = await page.$(action.selector);
+      if (!el) continue;
 
-    // Capture full page
+      if (action.type === "click") {
+        await el.click();
+      } else if (action.type === "hover") {
+        await el.hover();
+      } else if (action.type === "input" && action.value !== undefined) {
+        await el.fill(action.value);
+      }
+      await page.waitForTimeout(200); // small delay after each action
+    }
+
+    // Full page screenshot
     const buffer = await page.screenshot({ fullPage: true });
 
-    res.set("Content-Type", "image/png");
+    await browser.close();
+    res.setHeader("Content-Type", "image/png");
     res.send(buffer);
   } catch (err) {
-    console.error("Screenshot failed:", err);
-    res.status(500).send("Screenshot failed");
-  } finally {
-    await browser.close();
+    console.error(err);
+    res.status(500).send("Failed to capture screenshot");
   }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+const port = process.env.PORT || 3000;
+app.listen(port, () => console.log(`Server running on port ${port}`));
