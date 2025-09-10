@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
-# Fail fast
 set -o errexit
 
-# Install dependencies
+# Install Node dependencies
 npm install
 
-# Install playwright with all required system dependencies
-npx playwright install --with-deps
+# Install only Chromium (not all browsers, smaller + safer)
+npx playwright install chromium
