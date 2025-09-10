@@ -1,55 +1,64 @@
-// backend/screenshot.js
 import express from "express";
 import cors from "cors";
+import bodyParser from "body-parser";
 import { chromium } from "playwright";
 
 const app = express();
+const PORT = process.env.PORT || 3000;
+
 app.use(cors());
-app.use(express.json()); // for POST requests with JSON body
+app.use(bodyParser.json());
 
-/**
- * POST /screenshot
- * body: { url: string, actions: [{ type: 'click' | 'hover' | 'input', selector: string, value?: string }] }
- */
+// Screenshot endpoint
 app.post("/screenshot", async (req, res) => {
-  const { url, actions = [] } = req.body;
-  if (!url) return res.status(400).send("Missing URL");
+  const { url } = req.body;
 
+  if (!url) {
+    return res.status(400).send("Missing url in request body");
+  }
+
+  let browser;
   try {
-    const browser = await chromium.launch({ headless: true });
-    const page = await browser.newPage();
+    browser = await chromium.launch({
+      headless: true,
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage", // helps on low-memory servers
+        "--disable-gpu",
+      ],
+    });
 
-    await page.goto(url, { waitUntil: "networkidle" });
+    const context = await browser.newContext({
+      viewport: { width: 1280, height: 800 },
+    });
 
-    // Wait for your main container to render dynamic content
-    await page.waitForSelector("#container");
+    const page = await context.newPage();
 
-    // Perform interactive actions before screenshot
-    for (const action of actions) {
-      const el = await page.$(action.selector);
-      if (!el) continue;
+    // Navigate to the page
+    await page.goto(url, {
+      waitUntil: "networkidle", // ensures full load
+      timeout: 60000,
+    });
 
-      if (action.type === "click") {
-        await el.click();
-      } else if (action.type === "hover") {
-        await el.hover();
-      } else if (action.type === "input" && action.value !== undefined) {
-        await el.fill(action.value);
-      }
-      await page.waitForTimeout(200); // small delay after each action
-    }
+    // Extra wait for animations / React updates
+    await page.waitForTimeout(1500);
 
-    // Full page screenshot
+    // Take full page screenshot
     const buffer = await page.screenshot({ fullPage: true });
 
-    await browser.close();
     res.setHeader("Content-Type", "image/png");
     res.send(buffer);
   } catch (err) {
-    console.error(err);
+    console.error("❌ Screenshot error:", err);
     res.status(500).send("Failed to capture screenshot");
+  } finally {
+    if (browser) {
+      await browser.close();
+    }
   }
 });
 
-const port = process.env.PORT || 3000;
-app.listen(port, () => console.log(`Server running on port ${port}`));
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+});
