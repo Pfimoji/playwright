@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-set -e
+# Fail fast
+set -o errexit
 
-echo "Installing dependencies..."
+# Install dependencies
 npm install
 
-echo "Installing Playwright browsers..."
-npx playwright install chromium
+# Install playwright with all required system dependencies
+npx playwright install --with-deps
