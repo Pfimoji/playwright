@@ -1,45 +1,38 @@
-const express = require("express");
-const cors = require("cors"); // ✅ import CORS
-const { chromium } = require("playwright");
+import express from "express";
+import cors from "cors";
+import { chromium } from "playwright";
 
 const app = express();
 
-// ✅ Allow cross-origin requests from any domain (or specify your React app URL)
+// Enable CORS for all routes
 app.use(cors());
 
-const PORT = process.env.PORT || 3000;
-const FIGMA_SITE_URL = "https://pecan-kindle-00378129.figma.site";
-
-app.get("/", (req, res) => {
-  res.send(
-    `<h1>Playwright Screenshot API</h1>
-     <p>Visit <a href="/screenshot">/screenshot</a> to capture the Figma site.</p>`
-  );
-});
-
+// Screenshot endpoint
 app.get("/screenshot", async (req, res) => {
+  const url = req.query.url;
+
+  if (!url) {
+    return res.status(400).send("Missing url parameter");
+  }
+
+  const browser = await chromium.launch();
+  const page = await browser.newPage();
+
   try {
-    const browser = await chromium.launch({
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
-      headless: true,
-    });
+    await page.goto(url, { waitUntil: "networkidle" });
 
-    const page = await browser.newPage();
-    await page.goto(FIGMA_SITE_URL, { waitUntil: "networkidle" });
-    await page.waitForTimeout(2000);
+    const buffer = await page.screenshot({ fullPage: false });
 
-    const screenshot = await page.screenshot({ fullPage: true });
-    await browser.close();
-
-    res.setHeader("Content-Type", "image/png");
-    res.setHeader("Content-Disposition", "attachment; filename=figma.png");
-    res.send(screenshot);
+    res.set("Content-Type", "image/png");
+    res.send(buffer);
   } catch (err) {
-    console.error(err);
+    console.error("Screenshot failed:", err);
     res.status(500).send("Screenshot failed");
+  } finally {
+    await browser.close();
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+// Start server
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
