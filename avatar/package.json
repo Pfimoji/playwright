@@ -1,7 +1,8 @@
 {
-  "name": "figma-screenshot-service",
+  "name": "Pfimoji-screenshot-service",
   "version": "1.0.0",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "start": "node index.js",
     "build": "npm install && npx playwright install"
